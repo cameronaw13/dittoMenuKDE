@@ -103,10 +103,36 @@ Item {
         }
     }
 
+    property bool doublePressReady: false;
+
+    PlasmaCore.DataSource {
+        id: executable
+        engine: "executable"
+        connectedSources: []
+        onNewData: disconnectSource(sourceName)
+
+        function exec(cmd) {
+            executable.connectSource(cmd)
+        }
+    }
+
+    Timer {
+        id: doublePressTimer; interval: 350; repeat: false; triggeredOnStart: true;
+        running: false;
+        onTriggered: doublePressReady = !doublePressReady;
+    }
+
     Component.onCompleted: {
         dashWindow = Qt.createQmlObject("MenuRepresentation {}", root);
         plasmoid.activated.connect(function() {
-            dashWindow.visible = !dashWindow.visible;
+            if (doublePressReady) {
+                executable.exec('qdbus org.kde.kglobalaccel /component/kwin invokeShortcut "Overview"');
+                doublePressTimer.stop();
+                doublePressTimer.triggered();
+            } else {
+                doublePressTimer.start();
+                dashWindow.visible = !dashWindow.visible;
+            }
         });
     }
 }
